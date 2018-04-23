@@ -29,7 +29,7 @@ def describe(params):
     logging.info('rangeTerm:%s rangeTh:%s',channelBreakOut.rangeTerm,channelBreakOut.rangeTh)
     logging.info('waitTerm:%s waitTh:%s',channelBreakOut.waitTerm,channelBreakOut.waitTh)
     logging.info("===========Backtest===========")
-    pl, profitFactor, maxLoss, winPer, ev = channelBreakOut.describeResult()
+    pl, profitFactor, maxLoss, winPer, ev, nOfTrade, winTotal, loseTotal = channelBreakOut.describeResult()
 
     if "PFDD" in mlMode:
         result = profitFactor/maxLoss
@@ -38,11 +38,18 @@ def describe(params):
     elif "PF" in mlMode:
         result = -profitFactor
     elif "DD" in mlMode:
-        result = -maxLoss
+        result = maxLoss
     elif "WIN" in mlMode:
         result = -winPer
     elif "EV" in mlMode:
         result = -ev
+        
+    # 逆張り評価
+    result = - result
+    
+    # 取引回数は裁定200は欲しい
+    if nOfTrade < 200:
+        result = 1
 
     logging.info("===========Assessment===========")
     logging.info('Result:%s',result)

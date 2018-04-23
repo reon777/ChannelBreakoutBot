@@ -167,34 +167,24 @@ class ChannelBreakOut:
         """
         lowLine = []
         highLine = []
-        if rangePercent == None or rangePercentTerm == None:
-            for i in range(len(df_candleStick.index)):
-                if i < term:
-                    lowLine.append(df_candleStick["low"][i])
-                    highLine.append(df_candleStick["high"][i])
-                else:
-                    low = min([price for price in df_candleStick["low"][i-term:i-1]])
-                    high = max([price for price in df_candleStick["high"][i-term:i-1]])
-                    lowLine.append(low)
-                    highLine.append(high)
-        else:
-            priceRange = self.calculatePriceRange(df_candleStick, 1)
-            for i in range(len(df_candleStick.index)):
-                if i < term:
-                    lowLine.append(df_candleStick["low"][i] - priceRange[i] * rangePercent)
-                    highLine.append(df_candleStick["high"][i] + priceRange[i] * rangePercent)
-                elif i < rangePercentTerm:
-                    priceRangeMean = sum(priceRange[i-term:i-1]) / term
-                    low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
-                    high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
-                    lowLine.append(low)
-                    highLine.append(high)
-                else:
-                    priceRangeMean = sum(priceRange[i-rangePercentTerm:i-1]) / rangePercentTerm
-                    low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
-                    high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
-                    lowLine.append(low)
-                    highLine.append(high)
+        priceRange = self.calculatePriceRange(df_candleStick, 1)
+        for i in range(len(df_candleStick.index)):
+            if i < term:
+                lowLine.append(df_candleStick["low"][i-1])
+                highLine.append(df_candleStick["high"][i-1])
+            elif i < rangePercentTerm:
+                priceRangeMean = sum(priceRange[i-term:i-1]) / term
+
+                # ukiさんロジック
+                low = df_candleStick["close"][i-1] - priceRangeMean * rangePercent
+                high = df_candleStick["close"][i-1] + priceRangeMean * rangePercent
+
+
+                # low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
+                # high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
+
+                lowLine.append(low)
+                highLine.append(high)
         return (lowLine, highLine)
 
     def calculatePriceRange(self, df_candleStick, term):
@@ -244,19 +234,15 @@ class ChannelBreakOut:
         for i in range(len(df_candleStick.index)):
             #上抜けでエントリー
             if df_candleStick["high"][i] > entryHighLine[i] and i >= entryTerm:
-                # judgement[i][0] = round((df_candleStick["high"][i] + entryHighLine[i]*2) / 3)
                 judgement[i][0] = entryHighLine[i]
             #下抜けでエントリー
             if df_candleStick["low"][i] < entryLowLine[i] and i >= entryTerm:
-                # judgement[i][1] = round((df_candleStick["low"][i] + entryLowLine[i]*2) / 3)
                 judgement[i][1] = entryLowLine[i]
             #下抜けでクローズ
             if df_candleStick["low"][i] < closeLowLine[i] and i >= entryTerm:
-                # judgement[i][2] = round((df_candleStick["low"][i] + closeLowLine[i]*2) / 3)
                 judgement[i][2] = closeLowLine[i]
             #上抜けでクローズ
             if df_candleStick["high"][i] > closeHighLine[i] and i >= entryTerm:
-                # judgement[i][3] = round((df_candleStick["high"][i] + closeHighLine[i]*2) / 3)
                 judgement[i][3] = closeHighLine[i]
             else:
                 pass
@@ -455,7 +441,8 @@ class ChannelBreakOut:
         try:
             profitFactor = round(winTotal/-loseTotal, 3)
         except:
-            profitFactor = float("inf")
+            # profitFactor = float("inf")
+            profitFactor = 0
 
         maxProfit = max(plPerTrade, default=0)
         maxLoss = min(plPerTrade, default=0)
@@ -488,7 +475,7 @@ class ChannelBreakOut:
                 logging.info("%s %s %s %s", log[0], log[1], log[2], profit)
             logging.info("============")
 
-        return pl[-1], profitFactor, maxLoss, winPer, ev
+        return pl[-1], profitFactor, maxLoss, winPer, ev, nOfTrade, winTotal, loseTotal
 
     def fromListToDF(self, candleStick):
         """
