@@ -172,16 +172,24 @@ class ChannelBreakOut:
             if i < term:
                 lowLine.append(df_candleStick["low"][i-1])
                 highLine.append(df_candleStick["high"][i-1])
-            elif i < rangePercentTerm:
+            else:
                 priceRangeMean = sum(priceRange[i-term:i-1]) / term
-
-                # ukiさんロジック
-                low = df_candleStick["close"][i-1] - priceRangeMean * rangePercent
-                high = df_candleStick["close"][i-1] + priceRangeMean * rangePercent
-
-
+                
+                # 初期ロジック
                 # low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
                 # high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
+
+                # ukiさんロジック
+                # low = df_candleStick["close"][i-1] - priceRangeMean * rangePercent
+                # high = df_candleStick["close"][i-1] + priceRangeMean * rangePercent
+
+                # 高値・安値を少し変化
+                # low_range  = abs(df_candleStick["close"][i-1] - min([price for price in df_candleStick["low"][i-term:i-1]]))
+                # low_range  = low_range * rangePercent
+                # low        = df_candleStick["close"][i-1] - low_range
+                # high_range = abs(max([price for price in df_candleStick["low"][i - term:i - 1]]) - df_candleStick["close"][i - 1])
+                # high_range = high_range * rangePercent
+                # high       = df_candleStick["close"][i-1] + high_range
 
                 lowLine.append(low)
                 highLine.append(high)
