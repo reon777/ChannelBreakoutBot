@@ -167,7 +167,8 @@ class ChannelBreakOut:
         """
         lowLine = []
         highLine = []
-        if rangePercent == None or rangePercentTerm == None:
+        # if rangePercent == None or rangePercentTerm == None:
+        if rangePercent == None:
             for i in range(len(df_candleStick.index)):
                 if i < term:
                     lowLine.append(df_candleStick["low"][i])
@@ -178,23 +179,32 @@ class ChannelBreakOut:
                     lowLine.append(low)
                     highLine.append(high)
         else:
-            priceRange = self.calculatePriceRange(df_candleStick, 1)
+            # priceRange = self.calculatePriceRange(df_candleStick, term)
             for i in range(len(df_candleStick.index)):
                 if i < term:
-                    lowLine.append(df_candleStick["low"][i] - priceRange[i] * rangePercent)
-                    highLine.append(df_candleStick["high"][i] + priceRange[i] * rangePercent)
-                elif i < rangePercentTerm:
-                    priceRangeMean = sum(priceRange[i-term:i-1]) / term
-                    low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
-                    high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
-                    lowLine.append(low)
-                    highLine.append(high)
+                    # lowLine.append(df_candleStick["low"][i] - priceRange[i] * rangePercent)
+                    # highLine.append(df_candleStick["high"][i] + priceRange[i] * rangePercent)
+                    lowLine.append(df_candleStick["low"][i] * rangePercent)
+                    highLine.append(df_candleStick["high"][i] * rangePercent)
                 else:
-                    priceRangeMean = sum(priceRange[i-rangePercentTerm:i-1]) / rangePercentTerm
-                    low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
-                    high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
+                # パラメータ数を減らすため、rangePercentTermは使わない
+                # elif i < rangePercentTerm:
+                    # 初期ロジック
+                    # priceRangeMean = sum(priceRange[i-term:i-1]) / term
+                    # low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
+                    # high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
+
+                    # おれおれロジック
+                    low = min([price for price in df_candleStick["low"][i-term:i-1]]) * rangePercent
+                    high = max([price for price in df_candleStick["high"][i-term:i-1]]) * rangePercent
                     lowLine.append(low)
                     highLine.append(high)
+                # else:
+                    # priceRangeMean = sum(priceRange[i-rangePercentTerm:i-1]) / rangePercentTerm
+                    # low = min([price for price in df_candleStick["low"][i-term:i-1]]) - priceRangeMean * rangePercent
+                    # high = max([price for price in df_candleStick["high"][i-term:i-1]]) + priceRangeMean * rangePercent
+                    # lowLine.append(low)
+                    # highLine.append(high)
         return (lowLine, highLine)
 
     def calculatePriceRange(self, df_candleStick, term):
@@ -469,14 +479,14 @@ class ChannelBreakOut:
         winDec = winPer / 100
         ev = round(winDec * winAve + (1-winDec) * loseAve, 3)
 
-        logging.info('showFigure :%s, sendFigure :%s',self.showFigure, self.sendFigure)
-        logging.info('Period: %s > %s', df_candleStick.index[0], df_candleStick.index[-1])
-        logging.info("Total pl: {}JPY".format(int(pl[-1])))
-        logging.info("The number of Trades: {}".format(nOfTrade))
-        logging.info("The Winning percentage: {}%".format(winPer))
-        logging.info("Expected value: {}".format(ev))
+        # logging.info('showFigure :%s, sendFigure :%s',self.showFigure, self.sendFigure)
+        # logging.info('Period: %s > %s', df_candleStick.index[0], df_candleStick.index[-1])
         logging.info("The profitFactor: {}".format(profitFactor))
+        logging.info("The Winning percentage: {}%".format(winPer))
+        logging.info("The number of Trades: {}".format(nOfTrade))
+        # logging.info("Expected value: {}".format(ev))
         logging.info("The maximum Profit and Loss: {}JPY, {}JPY".format(maxProfit, maxLoss))
+        logging.info("Total pl: {}JPY".format(int(pl[-1])))
         if self.showTradeDetail:
             logging.info("==Trade detail==")
             for log in tradeLog:
@@ -513,7 +523,7 @@ class ChannelBreakOut:
     #csvファイル（ヘッダなし）からohlcデータを作成．
     def readDataFromFile(self, filename):
         for i in range(1, 10, 1):
-            with open(filename, 'r', encoding="utf-8") as f:
+            with open(filename, 'r', encoding="utf-16") as f:
                 reader = csv.reader(f)
                 header = next(reader)
                 for row in reader:

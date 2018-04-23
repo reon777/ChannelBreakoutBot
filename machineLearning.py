@@ -26,9 +26,9 @@ def describe(params):
     logging.info("===========Test pattern===========")
     logging.info('entryTerm:%s closeTerm:%s',channelBreakOut.entryTerm,channelBreakOut.closeTerm)
     logging.info('rangePercent:%s rangePercentTerm:%s',channelBreakOut.rangePercent,channelBreakOut.rangePercentTerm)
-    logging.info('rangeTerm:%s rangeTh:%s',channelBreakOut.rangeTerm,channelBreakOut.rangeTh)
-    logging.info('waitTerm:%s waitTh:%s',channelBreakOut.waitTerm,channelBreakOut.waitTh)
-    logging.info("===========Backtest===========")
+    # logging.info('rangeTerm:%s rangeTh:%s',channelBreakOut.rangeTerm,channelBreakOut.rangeTh)
+    # logging.info('waitTerm:%s waitTh:%s',channelBreakOut.waitTerm,channelBreakOut.waitTh)
+    # logging.info("===========Backtest===========")
     pl, profitFactor, maxLoss, winPer, ev = channelBreakOut.describeResult()
 
     if "PFDD" in mlMode:
@@ -38,15 +38,14 @@ def describe(params):
     elif "PF" in mlMode:
         result = -profitFactor
     elif "DD" in mlMode:
-        result = maxLoss
+        result = -maxLoss
     elif "WIN" in mlMode:
         result = -winPer
     elif "EV" in mlMode:
         result = -ev
-    elif "PF/DD" in mlMode:
-        result = -pl/DD
 
-    logging.info("===========Assessment===========")
+    result = -result
+    # logging.info("===========Assessment===========")
     return result
 
 def optimization(candleTerm, cost, fileName, hyperopt, mlMode, showTradeDetail):
