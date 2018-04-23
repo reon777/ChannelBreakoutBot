@@ -244,16 +244,20 @@ class ChannelBreakOut:
         for i in range(len(df_candleStick.index)):
             #上抜けでエントリー
             if df_candleStick["high"][i] > entryHighLine[i] and i >= entryTerm:
-                judgement[i][0] = round((df_candleStick["high"][i] + entryHighLine[i]*2) / 3)
+                # judgement[i][0] = round((df_candleStick["high"][i] + entryHighLine[i]*2) / 3)
+                judgement[i][0] = entryHighLine[i]
             #下抜けでエントリー
             if df_candleStick["low"][i] < entryLowLine[i] and i >= entryTerm:
-                judgement[i][1] = round((df_candleStick["low"][i] + entryLowLine[i]*2) / 3)
+                # judgement[i][1] = round((df_candleStick["low"][i] + entryLowLine[i]*2) / 3)
+                judgement[i][1] = entryLowLine[i]
             #下抜けでクローズ
             if df_candleStick["low"][i] < closeLowLine[i] and i >= entryTerm:
-                judgement[i][2] = round((df_candleStick["low"][i] + closeLowLine[i]*2) / 3)
+                # judgement[i][2] = round((df_candleStick["low"][i] + closeLowLine[i]*2) / 3)
+                judgement[i][2] = closeLowLine[i]
             #上抜けでクローズ
             if df_candleStick["high"][i] > closeHighLine[i] and i >= entryTerm:
-                judgement[i][3] = round((df_candleStick["high"][i] + closeHighLine[i]*2) / 3)
+                # judgement[i][3] = round((df_candleStick["high"][i] + closeHighLine[i]*2) / 3)
+                judgement[i][3] = closeHighLine[i]
             else:
                 pass
         return judgement
