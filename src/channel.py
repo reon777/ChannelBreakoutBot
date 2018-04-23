@@ -517,7 +517,7 @@ class ChannelBreakOut:
     #csvファイル（ヘッダなし）からohlcデータを作成．
     def readDataFromFile(self, filename):
         for i in range(1, 10, 1):
-            with open(filename, 'r', encoding="utf-8") as f:
+            with open(filename, 'r', encoding="utf-16") as f:
                 reader = csv.reader(f)
                 header = next(reader)
                 for row in reader:
