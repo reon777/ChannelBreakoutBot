@@ -1,6 +1,6 @@
 # Channel Breakout Bot for bitflyer-FX
 Special Thanks for Snufkin https://sshuhei.com/  
-README更新日 2018/4/22  
+README更新日 2018/4/28  
 
 <font size="4">
 本ソフトウェアの商用利用を禁止します。<br>
@@ -57,6 +57,7 @@ python3 trade.py
 
 ```bash
 git pull
+pip install -U -r requirements.txt
 ```
 ## 設定
 設定は`config.json`ファイルで行います。
@@ -89,6 +90,7 @@ git pull
 |mlMode|string|機械学習で最適値を求める項目を選択する。<br>PL:利益 PF:利益率 DD:ドローダウン <br>WIN:勝率 PFDD:利益率/ドローダウン <br>EV:期待値[勝率 * 平均利益 - (1-勝率) * 平均損失]|
 |useBlackList|true/false|optimization時にブラックリストを使用する。<br>マイナス収益のパラメータをブラックリストに登録し、次回以降該当パラメータはスキップする。|
 |keepPosition|true/false|`true`の場合、前回終了時のポジションを引き継ぐ|
+|sfdLimit|true/false|現物とFXの乖離率が4.9%を超える場合、超える方向へのエントリーを制限する。|
 
 ## バックテスト
 別途取得したOHLCデータ`fileName`を元にバックテストを行う。  
@@ -143,6 +145,7 @@ python3 machineLearning.py
 |rangeThAndrangeTerm|number/null|[rangeTh,rangeTerm]で指定。|
 |waitTermAndwaitTh|number|[waitTerm,waitTh]で指定。|
 |rangePercentList|number/null|[rangePercent,rangePercentTerm]で指定。|
+|candleTerm|number|[candleTerm]で指定。|
 
 ## optimization用のOHLCデータの取得
 コマンドライン引数に取得したい日付と取得時間足を指定する事が出来る。  

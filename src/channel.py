@@ -9,6 +9,7 @@ import pandas as pd
 import time
 import datetime
 import logging
+import websocket
 from pubnub.callbacks import SubscribeCallback
 from pubnub.enums import PNStatusCategory
 from pubnub.pnconfiguration import PNConfiguration
@@ -26,8 +27,9 @@ class ChannelBreakOut:
         f = open('config/config.json', 'r', encoding="utf-8")
         config = json.load(f)
         self.cryptowatch = cryptowatch.CryptoWatch()
-        #pubnubから取得した約定履歴を保存するリスト（基本的に不要．）
+        #取得した約定履歴を保存するリスト（基本的に不要．）
         self._executions = deque(maxlen=300)
+        self._spotExecutions = deque(maxlen=300)
         self._lot = 0.01
         self._product_code = config["product_code"]
         #各パラメタ．
@@ -58,6 +60,8 @@ class ChannelBreakOut:
         self.showTradeDetail = False
         # optimization用のOHLCcsvファイル
         self.fileName = None
+        # 現物とFXの価格差がSFDの許容値を超えた場合にエントリーを制限
+        self.sfdLimit = True
 
     @property
     def cost(self):
@@ -111,6 +115,13 @@ class ChannelBreakOut:
     @executions.setter
     def executions(self, val):
         self._executions = val
+
+    @property
+    def spotExecutions(self):
+        return self._spotExecutions
+    @spotExecutions.setter
+    def spotExecutions(self, val):
+        self._spotExecutions = val
 
     @property
     def pos(self):
@@ -407,6 +418,14 @@ class ChannelBreakOut:
         if self.fileName == None:
             if "H" in self.candleTerm:
                 candleStick = self.cryptowatch.getSpecifiedCandlestick(2000, "3600")
+            elif "30T" in self.candleTerm:
+                candleStick = self.cryptowatch.getSpecifiedCandlestick(4000, "1800")
+            elif "15T" in self.candleTerm:
+                candleStick = self.cryptowatch.getSpecifiedCandlestick(5999, "900")
+            elif "5T" in self.candleTerm:
+                candleStick = self.cryptowatch.getSpecifiedCandlestick(5999, "300")
+            elif "3T" in self.candleTerm:
+                candleStick = self.cryptowatch.getSpecifiedCandlestick(5999, "180")
             else:
                 candleStick = self.cryptowatch.getSpecifiedCandlestick(5999, "60")
         else:
@@ -511,12 +530,11 @@ class ChannelBreakOut:
 
     #csvファイル（ヘッダなし）からohlcデータを作成．
     def readDataFromFile(self, filename):
-        for i in range(1, 10, 1):
-            with open(filename, 'r', encoding="utf-8") as f:
-                reader = csv.reader(f)
-                header = next(reader)
-                for row in reader:
-                    candleStick = [row for row in reader if row[4] != "0"]
+        with open(filename, 'r', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            for row in reader:
+                candleStick = [row for row in reader if row[4] != "0"]
         dtDate = [datetime.datetime.strptime(data[0], '%Y-%m-%d %H:%M:%S') for data in candleStick]
         dtTimeStamp = [dt.timestamp() for dt in dtDate]
         for i in range(len(candleStick)):
@@ -580,8 +598,9 @@ class ChannelBreakOut:
         """
         注文の実行ループを回す関数
         """
-        self.executionsProcess()
-        #pubnubが回り始めるまで待つ．
+        self.executionsWebsocket()
+        self.spotExecutionsWebsocket()
+        #約定データが蓄積されるまで待機
         time.sleep(20)
         pos = 0
         pl = []
@@ -617,6 +636,14 @@ class ChannelBreakOut:
         try:
             if "H" in self.candleTerm:
                 candleStick = self.cryptowatch.getCandlestick(480, "3600")
+            elif "30T" in self.candleTerm:
+                candleStick = self.cryptowatch.getCandlestick(100, "1800")
+            elif "15T" in self.candleTerm:
+                candleStick = self.cryptowatch.getCandlestick(100, "900")
+            elif "5T" in self.candleTerm:
+                candleStick = self.cryptowatch.getCandlestick(100, "300")
+            elif "3T" in self.candleTerm:
+                candleStick = self.cryptowatch.getCandlestick(100, "180")
             else:
                 candleStick = self.cryptowatch.getCandlestick(480, "60")
         except:
@@ -635,7 +662,7 @@ class ChannelBreakOut:
             high = max([self.executions[-1-i]["price"] for i in range(30)])
             low = min([self.executions[-1-i]["price"] for i in range(30)])
         except:
-            logging.error("Pubnub connection error")
+            logging.error("Executions data connection error")
 
         message = "Starting for channelbreak."
         logging.info(message)
@@ -653,6 +680,14 @@ class ChannelBreakOut:
                 try:
                     if "H" in self.candleTerm:
                         candleStick = self.cryptowatch.getCandlestick(480, "3600")
+                    elif "30T" in self.candleTerm:
+                        candleStick = self.cryptowatch.getCandlestick(100, "1800")
+                    elif "15T" in self.candleTerm:
+                        candleStick = self.cryptowatch.getCandlestick(100, "900")
+                    elif "5T" in self.candleTerm:
+                        candleStick = self.cryptowatch.getCandlestick(100, "300")
+                    elif "3T" in self.candleTerm:
+                        candleStick = self.cryptowatch.getCandlestick(100, "180")
                     else:
                         candleStick = self.cryptowatch.getCandlestick(480, "60")
                 except:
@@ -678,21 +713,51 @@ class ChannelBreakOut:
             except:
                 logging.error("Pubnub connection error")
 
+            #レンジ幅リアルタイム判定
+            if self.rangeTh != None:
+                highRange = max([df_candleStick["high"][-self.rangeTerm:].max(), high])
+                lowRange = min([df_candleStick["low"][-self.rangeTerm:].min(), low])
+                priceRange = highRange - lowRange
+                if priceRange > self.rangeTh:
+                    isRange[-1] = False
+            else:
+                pass
+
             #売り買い判定
             judgement = self.judgeForLoop(high, low, entryHighLine, entryLowLine, closeHighLine, closeLowLine)
 
             #取引所のヘルスチェック
-            boardState = self.order.getboardstate()
-            serverHealth = True
-            permitHealth1 = ["NORMAL", "BUSY", "VERY BUSY"]
-            permitHealth2 = ["NORMAL", "BUSY", "VERY BUSY", "SUPER BUSY"]
-            if (boardState["health"] in permitHealth1) and boardState["state"] == "RUNNING" and self.healthCheck:
-                pass
-            elif (boardState["health"] in permitHealth2) and boardState["state"] == "RUNNING" and not self.healthCheck:
-                pass
-            else:
+            try:
+                boardState = self.order.getboardstate()
+                serverHealth = True
+                permitHealth1 = ["NORMAL", "BUSY", "VERY BUSY"]
+                permitHealth2 = ["NORMAL", "BUSY", "VERY BUSY", "SUPER BUSY"]
+                if (boardState["health"] in permitHealth1) and boardState["state"] == "RUNNING" and self.healthCheck:
+                    pass
+                elif (boardState["health"] in permitHealth2) and boardState["state"] == "RUNNING" and not self.healthCheck:
+                    pass
+                else:
+                    serverHealth = False
+                    logging.info('Server is %s/%s. Do not order.', boardState["health"], boardState["state"])
+            except:
                 serverHealth = False
-                logging.info('Server is %s/%s. Do not order.', boardState["health"], boardState["state"])
+                logging.error("Health check failed")
+
+            #現物とFXの乖離率を計算
+            sfdPosition = 0
+            if self.sfdLimit == True:
+                if self.executions[-1]["price"] > self.spotExecutions[-1]["price"]:
+                    sfd = round(self.executions[-1]["price"] / self.spotExecutions[-1]["price"] * 100 - 100,3)
+                    if sfd > 4.9:
+                        logging.info("Long limitation SFD:%s",sfd)
+                        sfdPosition = 1
+                else:
+                    sfd = round(self.spotExecutions[-1]["price"] / self.executions[-1]["price"] * 100 - 100,3)
+                    if sfd > 4.9:
+                        logging.info("Short limitation SFD:%s",sfd)
+                        sfdPosition = -1
+                if sfd <= 4.9:
+                    logging.info("SFD:%s",sfd)
 
             #ログ出力
             logging.info('high:%s low:%s isRange:%s', high, low, isRange[-1])
@@ -709,7 +774,7 @@ class ChannelBreakOut:
             #ここからエントリー，クローズ処理
             if pos == 0 and not isRange[-1] and serverHealth:
                 #ロングエントリー
-                if judgement[0]:
+                if judgement[0] and sfdPosition != 1:
                     logging.info("Long entry order")
                     orderId = self.order.market(size=lot, side="BUY")
                     pos += 1
@@ -721,7 +786,7 @@ class ChannelBreakOut:
                     lastPositionPrice = best_ask
                     self.writeorderhistory( best_ask, lot, 0, pos )
                 #ショートエントリー
-                elif judgement[1]:
+                elif judgement[1] and sfdPosition != -1:
                     logging.info("Short entry order")
                     orderId = self.order.market(size=lot,side="SELL")
                     pos -= 1
@@ -753,7 +818,7 @@ class ChannelBreakOut:
                     if plRange > self.waitTh:
                         waitTerm = self.waitTerm
                         lot = round(originalLot/10,3)
-                    if waitTerm > 0:
+                    elif waitTerm > 0:
                         waitTerm -= 1
                         lot = round(originalLot/10,3)
                     if waitTerm == 0:
@@ -779,7 +844,7 @@ class ChannelBreakOut:
                     if plRange > self.waitTh:
                         waitTerm = self.waitTerm
                         lot = round(originalLot/10,3)
-                    if waitTerm > 0:
+                    elif waitTerm > 0:
                         waitTerm -= 1
                         lot = round(originalLot/10,3)
                     if waitTerm == 0:
@@ -788,7 +853,7 @@ class ChannelBreakOut:
             #クローズしたと同時にエントリーシグナルが出ていた場合にドテン売買
             if pos == 0 and not isRange[-1] and serverHealth:
                 #ロングエントリー
-                if judgement[0]:
+                if judgement[0] and sfdPosition != 1:
                     logging.info("Long doten entry order")
                     orderId = self.order.market(size=lot, side="BUY")
                     pos += 1
@@ -800,7 +865,7 @@ class ChannelBreakOut:
                     lastPositionPrice = best_ask
                     self.writeorderhistory( best_ask, lot, 0, pos )
                 #ショートエントリー
-                elif judgement[1]:
+                elif judgement[1] and sfdPosition != -1:
                     logging.info("Short doten entry order")
                     orderId = self.order.market(size=lot,side="SELL")
                     pos -= 1
@@ -842,3 +907,79 @@ class ChannelBreakOut:
         pubnub.subscribe().channels(channels).execute()
         pubnubThread = threading.Thread(target=pubnub.start)
         pubnubThread.start()
+
+    def executionsWebsocket(self):
+        """
+        Websocketで価格を取得する場合の処理
+        """
+        executions = self.executions
+        def on_message(ws, message):
+            messages = json.loads(message)
+            execution = messages["params"]["message"]
+            for i in execution:
+                executions.append(i)
+
+        def on_error(ws, error):
+            logging.error(error)
+
+        def on_close(ws):
+            while True:
+                time.sleep(3)
+                try:
+                    ws = websocket.WebSocketApp("wss://ws.lightstream.bitflyer.com/json-rpc",
+                                                on_message = on_message,
+                                                on_error = on_error,
+                                                on_close = on_close)
+                    ws.on_open = on_open
+                    ws.run_forever()
+                except Exception as e:
+                    logging.error(e)
+
+        def on_open(ws):
+            ws.send(json.dumps({"method": "subscribe", "params": {"channel": "lightning_executions_FX_BTC_JPY"}}))
+
+        ws = websocket.WebSocketApp("wss://ws.lightstream.bitflyer.com/json-rpc",
+                                    on_message = on_message,
+                                    on_error = on_error,
+                                    on_close = on_close)
+        ws.on_open = on_open
+        websocketThread = threading.Thread(target=ws.run_forever)
+        websocketThread.start()
+
+    def spotExecutionsWebsocket(self):
+        """
+        Websocketで価格を取得する場合の処理
+        """
+        spotExecutions = self.spotExecutions
+        def on_message(ws, message):
+            messages = json.loads(message)
+            spotExecution = messages["params"]["message"]
+            for i in spotExecution:
+                spotExecutions.append(i)
+
+        def on_error(ws, error):
+            logging.error(error)
+
+        def on_close(ws):
+            while True:
+                time.sleep(3)
+                try:
+                    ws = websocket.WebSocketApp("wss://ws.lightstream.bitflyer.com/json-rpc",
+                                                on_message = on_message,
+                                                on_error = on_error,
+                                                on_close = on_close)
+                    ws.on_open = on_open
+                    ws.run_forever()
+                except Exception as e:
+                    logging.error(e)
+
+        def on_open(ws):
+            ws.send(json.dumps({"method": "subscribe", "params": {"channel": "lightning_executions_BTC_JPY"}}))
+
+        ws = websocket.WebSocketApp("wss://ws.lightstream.bitflyer.com/json-rpc",
+                                    on_message = on_message,
+                                    on_error = on_error,
+                                    on_close = on_close)
+        ws.on_open = on_open
+        websocketThread = threading.Thread(target=ws.run_forever)
+        websocketThread.start()
