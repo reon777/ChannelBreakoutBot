@@ -1,21 +1,50 @@
 1分足
 
 1. シンプルチャネルブレイクアウト戦略
-15, 2
-2018-04-23 07:20:10 INFO: The profitFactor: 0.394
-2018-04-23 07:20:10 INFO: The Winning percentage: 14.72%
-2018-04-23 07:20:10 INFO: The number of Trades: 632
-2018-04-23 07:20:10 INFO: The maximum Profit and Loss: 23242.0JPY, -3696.0JPY
-2018-04-23 07:20:10 INFO: Total pl: -280396JPY
+2018-04-24 09:26:34 INFO: Period: 2018-04-17 20:01:00 > 2018-04-24 00:50:00
+2018-04-24 09:26:34 INFO: Total pl: -106886JPY
+2018-04-24 09:26:34 INFO: The number of Trades: 914
+2018-04-24 09:26:34 INFO: The Winning percentage: 26.95%
+2018-04-24 09:26:34 INFO: Expected value: -117.644
+2018-04-24 09:26:34 INFO: The profitFactor: 0.769
+2018-04-24 09:26:34 INFO: The maximum Profit and Loss: 25000.0JPY, -4660.0JPY
 
-2. キツネさん版（高値・安値＋(or -)平均レンジ幅×レンジパーセント）
-⇒実施中
+2. リアルukiさんロジック（終値×平均レンジ幅×レンジパーセント）
+2018-04-24 07:28:57 INFO: Period: 2018-04-17 20:01:00 > 2018-04-24 00:50:00
+2018-04-24 07:28:57 INFO: Total pl: -332522JPY
+2018-04-24 07:28:57 INFO: The number of Trades: 1100
+2018-04-24 07:28:57 INFO: The Winning percentage: 32.27%
+2018-04-24 07:28:57 INFO: Expected value: -302.375
+2018-04-24 07:28:57 INFO: The profitFactor: 0.648
+2018-04-24 07:28:57 INFO: The maximum Profit and Loss: 19698.821875000023JPY, -10253.915625000023JPY
 
+3. 高値・安値からレンジパーセント
+2018-04-24 21:55:49 INFO: entryTerm:17 closeTerm:2
+2018-04-24 21:55:49 INFO: rangePercent:0.45 rangePercentTerm:None
+2018-04-24 21:55:49 INFO: rangeTerm:None rangeTh:None
+2018-04-24 21:55:49 INFO: waitTerm:0 waitTh:0
+2018-04-24 21:55:49 INFO: ======Backtest======
+2018-04-24 21:56:00 INFO: showFigure :False, sendFigure :False
+2018-04-24 21:56:00 INFO: Period: 2018-04-17 20:01:00 > 2018-04-24 00:50:00
+2018-04-24 21:56:00 INFO: Total pl: -571989JPY
+2018-04-24 21:56:00 INFO: The number of Trades: 2633
+2018-04-24 21:56:00 INFO: The Winning percentage: 24.46%
+2018-04-24 21:56:00 INFO: Expected value: -217.222
+2018-04-24 21:56:00 INFO: The profitFactor: 0.49
+2018-04-24 21:56:00 INFO: The maximum Profit and Loss: 14964.0JPY, -7546.800000000047JPY
 
-3. リアルukiさんロジック（終値×平均レンジ幅×レンジパーセント）
-⇒ロジックは組んだ。次会社PCで流す
+4 高値・安値からレンジパーセント（トレンドフォロー）
 
-
-
-4. シンプル×レンジ戦略　高値・安値×レンジパーセント
-
+2018-04-25 09:32:57 INFO: ======Best pattern======
+2018-04-25 09:32:57 INFO: candleTerm:1T mlMode:PF
+2018-04-25 09:32:57 INFO: entryTerm:2 closeTerm:17
+2018-04-25 09:32:57 INFO: rangePercent:0.65 rangePercentTerm:None
+2018-04-25 09:32:57 INFO: rangeTerm:None rangeTh:None
+2018-04-25 09:32:57 INFO: waitTerm:0 waitTh:0
+2018-04-25 09:32:57 INFO: ======Backtest======
+2018-04-25 09:33:04 INFO: showFigure :False, sendFigure :False
+2018-04-25 09:33:04 INFO: Period: 2018-04-17 20:01:002018-04-25 09:33:04 INFO: Total pl: 140606JPY
+2018-04-25 09:33:04 INFO: The number of Trades: 497
+2018-04-25 09:33:04 INFO: The Winning percentage: 37.2018-04-25 09:33:04 INFO: Expected value: 282.76
+2018-04-25 09:33:04 INFO: The profitFactor: 1.476
+2018-04-25 09:33:04 INFO: The maximum Profit and Loss

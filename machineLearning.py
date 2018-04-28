@@ -67,7 +67,7 @@ def optimization(candleTerm, cost, fileName, hyperopt, mlMode, showTradeDetail):
     termUpper = config["termUpper"]
 
     if "COMB" in linePattern:
-        entryAndCloseTerm = list(itertools.product(range(2,termUpper), range(2,termUpper)))
+        entryAndCloseTerm = list(itertools.product(range(2,termUpper[0]), range(2,termUpper[1])))
 
     total = len(entryAndCloseTerm) * len(rangeThAndrangeTerm) * len(waitTermAndwaitTh) * len(rangePercentList)
 
