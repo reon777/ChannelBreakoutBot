@@ -14,7 +14,7 @@ def eq(a, b):
     return (a == b) | (pd.isnull(a) & pd.isnull(b))
 
 def describe(params):
-    i, j, k, l, m, cost, fileName, core, useBlackList = params
+    i, j, k, l, m, n, o, p, q, cost, fileName, core, useBlackList = params
 
     channelBreakOut = channel.ChannelBreakOut()
     channelBreakOut.entryTerm = i[0]
@@ -28,9 +28,13 @@ def describe(params):
     channelBreakOut.candleTerm = str(m) + "T"
     channelBreakOut.cost = cost
     channelBreakOut.fileName = fileName
+    channelBreakOut.method = n
+    channelBreakOut.price_range_limit = o
+    channelBreakOut.tmp2 = p
+    channelBreakOut.tmp1 = q
     if core == 1:
         logging.info('================================')
-        logging.info('entryTerm:%s closeTerm:%s rangePercent:%s rangePercentTerm:%s rangeTerm:%s rangeTh:%s waitTerm:%s waitTh:%s candleTerm:%s',i[0],i[1],l[0],l[1],j[1],j[0],k[0],k[1],m)
+        logging.info('entryTerm:%s closeTerm:%s rangePercent:%s rangePercentTerm:%s rangeTerm:%s rangeTh:%s waitTerm:%s waitTh:%s candleTerm:%s method:%s price_range_limit:%s tmp2:%s tmp1:%s',i[0],i[1],l[0],l[1],j[1],j[0],k[0],k[1],m,n,o,p,q)
     else:
         pass
 
@@ -54,8 +58,8 @@ def describe(params):
         profitFactor = 0
     else:
         #テスト
-        pl, profitFactor, maxLoss, winPer, ev = channelBreakOut.describeResult()
-    return [pl, profitFactor, i, l, j, k, m, is_blacklist]
+        pl, profitFactor, maxLoss, winPer, ev, nOfTrade, winTotal, loseTotal = channelBreakOut.describeResult()
+    return [pl, profitFactor, i, l, j, k, m, n, o, p, q, is_blacklist, maxLoss, winPer, ev, nOfTrade, winTotal, loseTotal]
 
 def optimization(cost, fileName, core, useBlackList):
     #optimizeList.jsonの読み込み
@@ -68,22 +72,28 @@ def optimization(cost, fileName, core, useBlackList):
     linePattern = config["linePattern"]
     termUpper = config["termUpper"]
     candleTerm  = config["candleTerm"]
+    method  = config["method"]
+    price_range_limit = config["price_range_limit"]
+    tmp2 = config["tmp2"]
+    tmp1 = config["tmp1"]
 
     if "COMB" in linePattern:
-        entryAndCloseTerm = list(itertools.product(range(2,termUpper), range(2,termUpper)))
+        entryAndCloseTerm = list(itertools.product(range(10,termUpper[0]), range(2,termUpper[1])))
 
-    total = len(entryAndCloseTerm) * len(rangeThAndrangeTerm) * len(waitTermAndwaitTh) * len(rangePercentList) * len(candleTerm)
+    total = len(entryAndCloseTerm) * len(rangeThAndrangeTerm) * len(waitTermAndwaitTh) * len(rangePercentList) * len(candleTerm) * len(method) * len(price_range_limit) * len(tmp2) * len(tmp1)
 
     paramList = []
     params = []
-    for i, j, k, l, m in itertools.product(entryAndCloseTerm, rangeThAndrangeTerm, waitTermAndwaitTh, rangePercentList, candleTerm):
-        params.append([i, j, k, l, m, cost, fileName, core, useBlackList])
+    for i, j, k, l, m, n, o, p, q in itertools.product(entryAndCloseTerm, rangeThAndrangeTerm, waitTermAndwaitTh, rangePercentList, candleTerm, method, price_range_limit, tmp2, tmp1):
+        params.append([i, j, k, l, m, n, o, p, q, cost, fileName, core, useBlackList])
 
     black_list = read_blacklist()
     if core == 1:
         # 同期処理
         for param in params:
             result = describe(param)
+            with open("cv_addi.csv", "a") as file:
+                print(result, file=file)
             paramList.append(result)
             logging.info('[%s/%s]',len(paramList),total)
     else:
@@ -101,18 +111,19 @@ def optimization(cost, fileName, core, useBlackList):
     # ブラックリスト書き込み
     if useBlackList: black_list.to_csv('blacklist.csv', index=False, sep=',')
 
+    logging.info(paramList)
     pF = [i[1] for i in paramList]
     pL = [i[0] for i in paramList]
-    logging.info("======Optimization finished======")
-    logging.info('Search pattern :%s', len(paramList))
-    logging.info("Parameters:")
-    logging.info("[entryTerm, closeTerm], [rangePercent, rangePercentTerm], [rangeTh, rangeTerm], [waitTerm, waitTh], [candleTerm]")
-    logging.info("ProfitFactor max:")
-    logging.info(paramList[pF.index(max(pF))])
-    logging.info("PL max:")
-    logging.info(paramList[pL.index(max(pL))])
-    message = "Optimization finished.\n ProfitFactor max:{}\n PL max:{}".format(paramList[pF.index(max(pF))], paramList[pL.index(max(pL))])
-    channel.ChannelBreakOut().lineNotify(message)
+    # logging.info("======Optimization finished======")
+    # logging.info('Search pattern :%s', len(paramList))
+    # logging.info("Parameters:")
+    # logging.info("[entryTerm, closeTerm], [rangePercent, rangePercentTerm], [rangeTh, rangeTerm], [waitTerm, waitTh], [candleTerm]")
+    # logging.info("ProfitFactor max:")
+    # logging.info(paramList[pF.index(max(pF))])
+    # logging.info("PL max:")
+    # logging.info(paramList[pL.index(max(pL))])
+    # message = "Optimization finished.\n ProfitFactor max:{}\n PL max:{}".format(paramList[pF.index(max(pF))], paramList[pL.index(max(pL))])
+    # channel.ChannelBreakOut().lineNotify(message)
 
     #config.json設定用ログ
     print("*********PF max*********")

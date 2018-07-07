@@ -2,23 +2,25 @@
 import datetime
 
 
-def show(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_close_signals, sell_close_signals):
+def show(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_close_signals, sell_close_signals, ma_short, ma_long, myOHLC):
     plot(df_candleStick, plofits, buy_entry_signals,
-         sell_entry_signals, buy_close_signals, sell_close_signals, True)
+         sell_entry_signals, buy_close_signals, sell_close_signals, True, '', ma_short, ma_long, myOHLC)
 
 
 def save(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_close_signals, sell_close_signals, file_name):
     import matplotlib
     matplotlib.use('Agg')
     plot(df_candleStick, plofits, buy_entry_signals, sell_entry_signals,
-         buy_close_signals, sell_close_signals, False, file_name)
+         buy_close_signals, sell_close_signals, False, file_name, ma_short, ma_long)
 
 
-def plot(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_close_signals, sell_close_signals, is_show, file_name='fig.png'):
+def plot(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_close_signals, sell_close_signals, is_show, file_name, ma_short, ma_long, myOHLC):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
     from .mpl_finance import candlestick2_ohlc, volume_overlay
+
+    file_name = 'fig.png'
 
     df = df_candleStick
     # グラフ生成(figsize=グラフサイズx,y)
@@ -32,12 +34,18 @@ def plot(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_clo
     # 描画幅の設定
     bottom, top = ax.get_ylim()
     ax.set_ylim(bottom - (top - bottom) / 5, top)
-    # 出来高の描画
-    ax_v = ax.twinx()
-    volume_overlay(ax_v, df["open"], df["close"], df["volume"], width=0.7, colorup="g", colordown="g")
-    ax_v.set_xlim([0, df.shape[0]])
-    ax_v.set_ylim([0, df["volume"].max() * 4])
-    ax_v.set_ylabel("Volume")
+    if myOHLC:
+        pass
+    else:
+        # 出来高の描画
+        ax_v = ax.twinx()
+        volume_overlay(ax_v, df["open"], df["close"], df["volume"], width=0.7, colorup="g", colordown="g")
+        ax_v.set_xlim([0, df.shape[0]])
+        ax_v.set_ylim([0, df["volume"].max() * 4])
+        ax_v.set_ylabel("Volume")
+    # 指標の描画
+    ax.plot(ma_short, linewidth=0.8)
+    ax.plot(ma_long, linewidth=0.8)
     # X軸調整
     xdate = [i.strftime('%y-%m-%d %H:%M') for i in df.index]
 
@@ -63,7 +71,7 @@ def plot(df_candleStick, plofits, buy_entry_signals, sell_entry_signals, buy_clo
     ax.vlines([df.index.get_loc(s) for s in buy_close_signals],
               ymin, ymax, "black", linestyles='dashed', linewidth=1)
     ax.vlines([df.index.get_loc(s) for s in sell_close_signals],
-              ymin, ymax, "green", linestyles='dashed', linewidth=1)
+              ymin, ymax, "black", linestyles='dashed', linewidth=1)
 
     # 2つ目のグラフ(収益グラフ)
     ax2 = plt.subplot(2, 1, 2)

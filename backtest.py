@@ -4,6 +4,7 @@
 import json
 import logging
 from src import channel
+from src import maCross
 
 if __name__ == '__main__':
     #logging設定
@@ -26,8 +27,11 @@ if __name__ == '__main__':
     f = open('config/config.json', 'r', encoding="utf-8")
     config = json.load(f)
 
-    #channelBreakOut設定値
+    #channelBreakOut設定値    
+    # ロジック
     channelBreakOut = channel.ChannelBreakOut()
+    # channelBreakOut = maCross.MACross()
+
     channelBreakOut.entryTerm = config["entryTerm"]
     channelBreakOut.closeTerm = config["closeTerm"]
     channelBreakOut.rangePercent = config["rangePercent"]
@@ -42,6 +46,9 @@ if __name__ == '__main__':
     channelBreakOut.showFigure = config["showFigure"]
     channelBreakOut.sendFigure = config["sendFigure"]
     channelBreakOut.showTradeDetail = config["showTradeDetail"]
+
+    channelBreakOut.readFile()
+    channelBreakOut.calcPriceRange()
 
     #バックテスト
     channelBreakOut.describeResult()

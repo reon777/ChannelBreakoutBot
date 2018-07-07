@@ -1,50 +1,81 @@
-1分足
+git fetch upstream
+git merge upstream/master
 
-1. シンプルチャネルブレイクアウト戦略
-2018-04-24 09:26:34 INFO: Period: 2018-04-17 20:01:00 > 2018-04-24 00:50:00
-2018-04-24 09:26:34 INFO: Total pl: -106886JPY
-2018-04-24 09:26:34 INFO: The number of Trades: 914
-2018-04-24 09:26:34 INFO: The Winning percentage: 26.95%
-2018-04-24 09:26:34 INFO: Expected value: -117.644
-2018-04-24 09:26:34 INFO: The profitFactor: 0.769
-2018-04-24 09:26:34 INFO: The maximum Profit and Loss: 25000.0JPY, -4660.0JPY
 
-2. リアルukiさんロジック（終値×平均レンジ幅×レンジパーセント）
-2018-04-24 07:28:57 INFO: Period: 2018-04-17 20:01:00 > 2018-04-24 00:50:00
-2018-04-24 07:28:57 INFO: Total pl: -332522JPY
-2018-04-24 07:28:57 INFO: The number of Trades: 1100
-2018-04-24 07:28:57 INFO: The Winning percentage: 32.27%
-2018-04-24 07:28:57 INFO: Expected value: -302.375
-2018-04-24 07:28:57 INFO: The profitFactor: 0.648
-2018-04-24 07:28:57 INFO: The maximum Profit and Loss: 19698.821875000023JPY, -10253.915625000023JPY
+やることリスト
+・RSIとかの指標利用する
+・bitmexのwebsocket利用する
 
-3. 高値・安値からレンジパーセント
-2018-04-24 21:55:49 INFO: entryTerm:17 closeTerm:2
-2018-04-24 21:55:49 INFO: rangePercent:0.45 rangePercentTerm:None
-2018-04-24 21:55:49 INFO: rangeTerm:None rangeTh:None
-2018-04-24 21:55:49 INFO: waitTerm:0 waitTh:0
-2018-04-24 21:55:49 INFO: ======Backtest======
-2018-04-24 21:56:00 INFO: showFigure :False, sendFigure :False
-2018-04-24 21:56:00 INFO: Period: 2018-04-17 20:01:00 > 2018-04-24 00:50:00
-2018-04-24 21:56:00 INFO: Total pl: -571989JPY
-2018-04-24 21:56:00 INFO: The number of Trades: 2633
-2018-04-24 21:56:00 INFO: The Winning percentage: 24.46%
-2018-04-24 21:56:00 INFO: Expected value: -217.222
-2018-04-24 21:56:00 INFO: The profitFactor: 0.49
-2018-04-24 21:56:00 INFO: The maximum Profit and Loss: 14964.0JPY, -7546.800000000047JPY
+〇bitmex
+　5, 15
+　□逆張り
+　　マイナス手数料踏まえてもう一度バックテスト中！
+    ⇒どうやっても暴騰暴落に殺されるので損切ロジック考案中。。
+    PF1.3だしドローダウン大きいし使えない。。
 
-4 高値・安値からレンジパーセント（トレンドフォロー）
 
-2018-04-25 09:32:57 INFO: ======Best pattern======
-2018-04-25 09:32:57 INFO: candleTerm:1T mlMode:PF
-2018-04-25 09:32:57 INFO: entryTerm:2 closeTerm:17
-2018-04-25 09:32:57 INFO: rangePercent:0.65 rangePercentTerm:None
-2018-04-25 09:32:57 INFO: rangeTerm:None rangeTh:None
-2018-04-25 09:32:57 INFO: waitTerm:0 waitTh:0
-2018-04-25 09:32:57 INFO: ======Backtest======
-2018-04-25 09:33:04 INFO: showFigure :False, sendFigure :False
-2018-04-25 09:33:04 INFO: Period: 2018-04-17 20:01:002018-04-25 09:33:04 INFO: Total pl: 140606JPY
-2018-04-25 09:33:04 INFO: The number of Trades: 497
-2018-04-25 09:33:04 INFO: The Winning percentage: 37.2018-04-25 09:33:04 INFO: Expected value: 282.76
-2018-04-25 09:33:04 INFO: The profitFactor: 1.476
-2018-04-25 09:33:04 INFO: The maximum Profit and Loss
+　□トレンドフォロー
+     750円幅の手数料あるので絶対勝てない
+     ⇒しかもレバあれば倍増するらしい！絶対勝てないｗｗｗｗｗ
+     ⇒逆指値でやる！！！
+    ⇒全然刺さらんけど一応稼働させておく。。
+    　⇒やっぱやめた
+
+〇bitflyer
+　□逆張り
+chart_5min_old
+テスト中
+
+　□トレンドフォロー
+フォワードテストしたらボロ負けだったので稼働させず。。
+chart_5min_old
+2018-06-05 11:23:08 INFO: method:3
+2018-06-05 11:23:08 INFO: price_range_limit:1
+2018-06-05 11:23:08 INFO: crash_ratio:100
+2018-06-05 11:23:08 INFO: risk_term:1
+2018-06-05 11:23:08 INFO: break_term:1
+2018-06-05 11:23:08 INFO: candleTerm:5T
+2018-06-05 11:23:08 INFO: entryTerm:5 closeTerm:11
+2018-06-05 11:23:08 INFO: rangePercent:0.5 rangePercentTerm:None
+2018-06-05 11:23:08 INFO: rangeTerm:None rangeTh:None
+2018-06-05 11:23:08 INFO: waitTerm:0 waitTh:0
+2018-06-05 11:23:08 INFO: ===========Backtest===========
+2018-06-05 11:23:15 INFO: showFigure :False, sendFigure :False
+2018-06-05 11:23:15 INFO: Period: 2018-05-11 05:45:00 > 2018-05-30 22:25:00
+2018-06-05 11:23:15 INFO: Total pl: 210225JPY
+2018-06-05 11:23:15 INFO: The number of Trades: 544
+2018-06-05 11:23:15 INFO: The Winning percentage: 30.88%
+2018-06-05 11:23:15 INFO: Expected value: 386.25
+2018-06-05 11:23:15 INFO: The profitFactor: 1.259
+2018-06-05 11:23:15 INFO: The maximum Profit and Loss: 40856.5JPY, -14282.5JPY
+2018-06-05 11:23:15 INFO: ===========Assessment===========
+2018-06-05 11:23:15 INFO: Result:-264673.9045
+2018-06-05 11:23:15 INFO: tpe_transform took 0.155111 seconds
+2018-06-05 11:23:15 INFO: TPE using 106/106 trials with best loss -264673.904500
+
+maCrossも同様にフォワードテストしたらボロ負けだったので稼働させず。。
+2018-06-05 12:38:28 INFO: method:2
+2018-06-05 12:38:28 INFO: price_range_limit:1
+2018-06-05 12:38:28 INFO: crash_ratio:100
+2018-06-05 12:38:28 INFO: risk_term:1
+2018-06-05 12:38:28 INFO: break_term:1
+2018-06-05 12:38:28 INFO: candleTerm:5T
+2018-06-05 12:38:28 INFO: entryTerm:12 closeTerm:22
+2018-06-05 12:38:28 INFO: rangePercent:1.0 rangePercentTerm:None
+2018-06-05 12:38:28 INFO: rangeTerm:None rangeTh:None
+2018-06-05 12:38:28 INFO: waitTerm:0 waitTh:0
+2018-06-05 12:38:28 INFO: ===========Backtest===========
+2018-06-05 12:38:32 INFO: showFigure :False, sendFigure :False
+2018-06-05 12:38:32 INFO: Period: 2018-05-11 05:45:00 > 2018-05-30 22:25:00
+2018-06-05 12:38:32 INFO: Total pl: 162927JPY
+2018-06-05 12:38:32 INFO: The number of Trades: 164
+2018-06-05 12:38:32 INFO: The Winning percentage: 38.41%
+2018-06-05 12:38:32 INFO: Expected value: 992.874
+2018-06-05 12:38:32 INFO: The profitFactor: 1.42
+2018-06-05 12:38:32 INFO: The maximum Profit and Loss: 43018.0JPY, -25196.0JPY
+2018-06-05 12:38:32 INFO: ===========Assessment===========
+2018-06-05 12:38:32 INFO: Result:-231356.34
+2018-06-05 12:38:32 INFO: tpe_transform took 0.205144 seconds
+2018-06-05 12:38:32 INFO: TPE using 17/17 trials with best loss -231356.340000
+
+chart_1min_old
