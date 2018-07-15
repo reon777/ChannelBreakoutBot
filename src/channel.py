@@ -316,10 +316,13 @@ class ChannelBreakOut:
         # 実際にはポジションの関係で注文しないものもある
         judgement = [[0,0,0,0] for i in range(len(df_candleStick.index))]
         judgement_RSI = [[True,True,False,False] for i in range(len(df_candleStick.index))]
+        judgement_STOCHRSI = [[True,True,False,False] for i in range(len(df_candleStick.index))]
+        judgement_STOCH = [[True,True,False,False] for i in range(len(df_candleStick.index))]
         judgement_BBANDS = [[True,True,False,False] for i in range(len(df_candleStick.index))]
         judgement_CCI = [[True,True,False,False] for i in range(len(df_candleStick.index))]
         judgement_ROC = [[True,True,False,False] for i in range(len(df_candleStick.index))]
         judgement_LAST = [[True,True,False,False] for i in range(len(df_candleStick.index))]
+        judgement_OR = [[True,True,False,False] for i in range(len(df_candleStick.index))]
 
         if 'MA' in self.method:
             close = pd.to_numeric(df_candleStick['close']).astype(float)
@@ -420,6 +423,54 @@ class ChannelBreakOut:
                 else:
                     pass
 
+        if 'STOCHRSI' in self.method:
+            judgement_STOCHRSI = [[False,False,False,False] for i in range(len(df_candleStick.index))]
+            STOCHRSI = abstract.STOCHRSI(df_candleStick, timeperiod=100, fastk_period=14)
+            print(STOCHRSI)
+            for i in range(len(df_candleStick.index)):
+
+                if i < 16:
+                    continue
+
+                if self.gyakubari:
+                    if 0 < STOCHRSI['fastk'][i-1] and STOCHRSI['fastk'][i-1] < 5 and STOCHRSI['fastk'][i-2] > 5:
+                        judgement_STOCHRSI[i][0] = True # 買いエントリー
+                    if STOCHRSI['fastk'][i-1] >= 60:
+                        judgement_STOCHRSI[i][2] = True # 買いクローズ
+                    if 95 < STOCHRSI['fastk'][i-1] and STOCHRSI['fastk'][i-1] < 100 and STOCHRSI['fastk'][i-2] < 95:
+                        judgement_STOCHRSI[i][1] = True # 売りエントリー
+                    if STOCHRSI['fastk'][i-1] <= 40:
+                        judgement_STOCHRSI[i][3] = True # 売りクローズ
+                else:
+                    pass
+
+        if 'STOCH' in self.method:
+            judgement_STOCH = [[False,False,False,False] for i in range(len(df_candleStick.index))]
+            STOCH = abstract.STOCH(df_candleStick, fastk_period=15, slowk_period=1)
+            print(STOCH)
+            for i in range(len(df_candleStick.index)):
+
+                if i < 16:
+                    continue
+
+                if self.gyakubari:
+                    if STOCH['slowk'][i-1] < 5:
+                        judgement_STOCH[i][0] = True # 買いエントリー
+                    if STOCH['slowk'][i-1] >= 50:
+                        judgement_STOCH[i][2] = True # 買いクローズ
+                    if 95 < STOCH['slowk'][i-1]:
+                        judgement_STOCH[i][1] = True # 売りエントリー
+                    if STOCH['slowk'][i-1] <= 50:
+                        judgement_STOCH[i][3] = True # 売りクローズ
+                    # # 損切
+                    # if STOCH['slowk'][i-1]  == 0:
+                    #     judgement_STOCH[i][2] = True # 買いクローズ
+                    # if STOCH['slowk'][i-1]  == 100:
+                    #     judgement_STOCH[i][3] = True # 売りクローズ
+
+                else:
+                    pass
+
         if 'ROC' in self.method:
             judgement_ROC = [[False,False,False,False] for i in range(len(df_candleStick.index))]
             self.ROC = abstract.ROC(df_candleStick, timeperiod=1)
@@ -502,6 +553,29 @@ class ChannelBreakOut:
                 else:
                     pass
 
+        if 'OR' in self.method:
+            '大きくブレイクしたら次の足の始値で売買する'
+            judgement_OR = [[False,False,False,False] for i in range(len(df_candleStick.index))]
+            priceRangeMean = self.calculateMA(self.priceRange, 5, 'SMA')
+            for i in range(len(df_candleStick.index)):
+                if i < entryTerm + 2:
+                    continue
+
+                if self.gyakubari:
+                    if df_candleStick['close'][i-1] > df_candleStick['close'][i-2]:
+                        judgement_OR[i][0] = True # 買いエントリー
+                    if df_candleStick['close'][i-1] < df_candleStick['close'][i-2]:
+                        judgement_OR[i][1] = True # 売りエントリー
+                else:
+                    minPrice = min([price for price in df_candleStick["low"][i-entryTerm-1:i-1]])
+                    maxPrice = max([price for price in df_candleStick["high"][i-entryTerm-1:i-1]])
+                    now_price_range_buy = df_candleStick['high'][i-1] - df_candleStick['open'][i-1]
+                    now_price_range_sell = df_candleStick['open'][i-1] - df_candleStick['low'][i-1]
+                    if df_candleStick['close'][i-1] > maxPrice and now_price_range_buy > priceRangeMean[i-1]*1:
+                        judgement_OR[i][0] = True # 買いエントリー
+                    elif df_candleStick['close'][i-1] < minPrice and now_price_range_sell > priceRangeMean[i-1]*1:
+                        judgement_OR[i][1] = True # 売りエントリー
+
         if 'line_' in self.method:
             for i in range(len(df_candleStick.index)):
                 
@@ -546,54 +620,55 @@ class ChannelBreakOut:
                         else:
                             pass
                     else:
+                        MAX_cost = 3000
                         # 0.5はstoplimitのトリガ価格分を想定
                         #上抜けでロングエントリー                    
-                        if df_candleStick["high"][i] > entryHighLine[i]+0.5:
+                        if df_candleStick["high"][i] > entryHighLine[i]:
                             judgement[i][0] = round((df_candleStick["high"][i] + entryHighLine[i]*2) / 3)
-                            if abs(judgement[i][0] - entryHighLine[i]) > 1000:
-                                judgement[i][0] = entryHighLine[i] + 1000
+                            if abs(judgement[i][0] - entryHighLine[i]) > MAX_cost:
+                                judgement[i][0] = entryHighLine[i] + MAX_cost
                             # BBANDSは終値からの算出じゃないので、急な動きの場合、始値がすでにエントリーラインより
                             # 大幅に上下している場合があるのでその考慮
                             if judgement[i][0] < df_candleStick["open"][i]:
                                 judgement[i][0] = df_candleStick["open"][i]
                         #下抜けでショートエントリー
-                        if df_candleStick["low"][i] < entryLowLine[i]-0.5:
+                        if df_candleStick["low"][i] < entryLowLine[i]:
                             judgement[i][1] = round((df_candleStick["low"][i] + entryLowLine[i]*2) / 3)
-                            if abs(judgement[i][1] - entryLowLine[i]) > 1000:
-                                judgement[i][1] = entryLowLine[i] - 1000
+                            if abs(judgement[i][1] - entryLowLine[i]) > MAX_cost:
+                                judgement[i][1] = entryLowLine[i] - MAX_cost
                             # judgement[i][1] = entryLowLine[i]
                             if judgement[i][1] > df_candleStick["open"][i]:
                                 judgement[i][1] = df_candleStick["open"][i]
-                        # # ショートクローズ
-                        # if df_candleStick["high"][i] > closeHighLine[i]:
-                        #     judgement[i][3] = round((df_candleStick["high"][i] + closeHighLine[i]*2) / 3)
-                        #     if abs(judgement[i][3] - entryLowLine[i]) > 1000:
-                        #         judgement[i][3] = closeHighLine[i] + 1000
-                        #     # judgement[i][3] = closeHighLine[i]
-                        #     if judgement[i][3] < df_candleStick["open"][i]:
-                        #         judgement[i][3] = df_candleStick["open"][i]
-                        # # ロングクローズ
-                        # if df_candleStick["low"][i] < closeLowLine[i]:
-                        #     judgement[i][2] = round((df_candleStick["low"][i] + closeLowLine[i]*2) / 3)
-                        #     if abs(judgement[i][2] - closeLowLine[i]) > 1000:
-                        #         judgement[i][2] = closeLowLine[i] - 1000
-                        #     # judgement[i][2] = closeLowLine[i]
-                        #     if judgement[i][2] > df_candleStick["open"][i]:
-                        #         judgement[i][2] = df_candleStick["open"][i]
+                        # ショートクローズ
+                        if df_candleStick["high"][i] > closeHighLine[i]:
+                            judgement[i][3] = round((df_candleStick["high"][i] + closeHighLine[i]*2) / 3)
+                            if abs(judgement[i][3] - entryLowLine[i]) > MAX_cost:
+                                judgement[i][3] = closeHighLine[i] + MAX_cost
+                            # judgement[i][3] = closeHighLine[i]
+                            if judgement[i][3] < df_candleStick["open"][i]:
+                                judgement[i][3] = df_candleStick["open"][i]
+                        # ロングクローズ
+                        if df_candleStick["low"][i] < closeLowLine[i]:
+                            judgement[i][2] = round((df_candleStick["low"][i] + closeLowLine[i]*2) / 3)
+                            if abs(judgement[i][2] - closeLowLine[i]) > MAX_cost:
+                                judgement[i][2] = closeLowLine[i] - MAX_cost
+                            # judgement[i][2] = closeLowLine[i]
+                            if judgement[i][2] > df_candleStick["open"][i]:
+                                judgement[i][2] = df_candleStick["open"][i]
 
         else:
-            pass
-            # for i in range(len(df_candleStick.index)):
-            #     if i < 2:
-            #         continue
-            #     if judgement_RSI[i][0] and judgement_BBANDS[i][0] and judgement_CCI[i][0] and judgement_LAST[i][0] and judgement_ROC[i][0]:
-            #         judgement[i][0] = df_candleStick["open"][i] # 買いエントリー
-            #     if judgement_RSI[i][1] and judgement_BBANDS[i][1] and judgement_CCI[i][1] and judgement_LAST[i][1] and judgement_ROC[i][1]:
-            #         judgement[i][1] = df_candleStick["open"][i] # 売りエントリー
-            #     if judgement_RSI[i][2] or judgement_BBANDS[i][2] or judgement_CCI[i][2] or judgement_LAST[i][2] or judgement_ROC[i][2]:
-            #         judgement[i][2] = df_candleStick["open"][i] # 買いクローズ
-            #     if judgement_RSI[i][3] or judgement_BBANDS[i][3] or judgement_CCI[i][3] or judgement_LAST[i][3] or judgement_ROC[i][3]:
-            #         judgement[i][3] = df_candleStick["open"][i] # 売りクローズ
+            for i in range(len(df_candleStick.index)):
+                if i < 2:
+                    continue
+
+                if judgement_RSI[i][0] and judgement_BBANDS[i][0] and judgement_CCI[i][0] and judgement_LAST[i][0] and judgement_ROC[i][0] and judgement_STOCHRSI[i][0] and judgement_STOCH[i][0] and judgement_OR[i][0]:
+                    judgement[i][0] = df_candleStick["open"][i] # 買いエントリー
+                if judgement_RSI[i][1] and judgement_BBANDS[i][1] and judgement_CCI[i][1] and judgement_LAST[i][1] and judgement_ROC[i][1] and judgement_STOCHRSI[i][1] and judgement_STOCH[i][1] and judgement_OR[i][1]:
+                    judgement[i][1] = df_candleStick["open"][i] # 売りエントリー
+                if judgement_RSI[i][2] or judgement_BBANDS[i][2] or judgement_CCI[i][2] or judgement_LAST[i][2] or judgement_ROC[i][2] or judgement_STOCHRSI[i][2] or judgement_STOCH[i][2] or judgement_OR[i][2]:
+                    judgement[i][2] = df_candleStick["open"][i] # 買いクローズ
+                if judgement_RSI[i][3] or judgement_BBANDS[i][3] or judgement_CCI[i][3] or judgement_LAST[i][3] or judgement_ROC[i][3] or judgement_STOCHRSI[i][3] or judgement_STOCH[i][3] or judgement_OR[i][3]:
+                    judgement[i][3] = df_candleStick["open"][i] # 売りクローズ
 
         t1 = time.time()
 
@@ -627,8 +702,8 @@ class ChannelBreakOut:
 
         # トレンドの強弱のフィルタ
         self.trend_adx = [True for i in range(len(df_candleStick.index))]
-        self.ADX = abstract.ADX(df_candleStick, timeperiod=14)
         if "ADX" in self.filtter:
+            self.ADX = abstract.ADX(df_candleStick, timeperiod=14)
             for i in range(len(df_candleStick.index)):
                 if i < 14:
                     continue
@@ -740,7 +815,6 @@ class ChannelBreakOut:
             '''
             # 105, 296372JPY, 5.55
             self.ROC = abstract.ROC(df_candleStick, timeperiod=6)
-            time.sleep(100)
             # Q1 = self.ROC.quantile(self.filtter_param)
             # Q3 = self.ROC.quantile(1-self.filtter_param)
             Q1 = -self.filtter_param
@@ -824,12 +898,6 @@ class ChannelBreakOut:
                         judgement[i][0] = 0 # 買い新規しない
                         judgement[i][1] = 0 # 売り新規しない
         if 'NATR' in self.filtter:
-            Q1 = 0
-            Q3 = 0
-            # close = pd.to_numeric(self.df_candleStick_1H['close']).astype(float)
-            # self.ma_short = self.calculateMA(close, 12, 'EMA')
-            # df_candleStick["std_30"] = [df_candleStick["close"][i-30+1:i].std() for i in range(len(df_candleStick.index))]
-            # df_candleStick["std_10"] = [df_candleStick["close"][i-10+1:i].std() for i in range(len(df_candleStick.index))]
             self.NATR = abstract.NATR(df_candleStick, timeperiod=14)
 
             for i in range(len(df_candleStick.index)):
@@ -838,6 +906,7 @@ class ChannelBreakOut:
                 if i < 14:
                     continue
                 # ボラがない
+                # if self.NATR[i-1] < self.NATR[i-1-14]:
                 if self.NATR[i-1] < 0.05:
                     if self.gyakubari:
                         judgement[i][0] = 0 # 買い新規しない
@@ -845,34 +914,59 @@ class ChannelBreakOut:
                     else:
                         pass
                 # ボラめっちゃある
+                # elif self.NATR[i-1] > self.NATR[i-1-14]:
                 elif self.NATR[i-1] > 0.1:
                     if self.gyakubari:
                         pass
                     else:
                         judgement[i][0] = 0 # 買い新規しない
                         judgement[i][1] = 0 # 売り新規しない
-        if 'ore' in self.filtter:
+        if 'LAST' in self.filtter:
+            '''直近の足の方向にしかエントリーしない
+            '''
             for i in range(len(df_candleStick.index)):
                 if i == len(df_candleStick.index)-1:
                     continue
                 if i < 14:
                     continue
 
-                if df_candleStick['close'][i-1] > df_candleStick['open'][i-1] and \
-                   df_candleStick['close'][i-2] > df_candleStick['open'][i-2]:
-                    pass
+                if df_candleStick['close'][i-1] > df_candleStick['open'][i-1]:
+                    judgement[i][1] = 0 # 売り新規しない
                 else:
                     judgement[i][0] = 0 # 買い新規しない
+        if 'MA' in self.filtter:
+            close = pd.to_numeric(self.df_candleStick['close']).astype(float)
+            self.ma = self.calculateMA(close, self.filtter_param, 'SMA')
 
-                if df_candleStick['close'][i-1] < df_candleStick['open'][i-1] and \
-                   df_candleStick['close'][i-2] < df_candleStick['open'][i-2]:
-                    pass
-                else:
+            for i in range(len(df_candleStick.index)):
+                if i == len(df_candleStick.index)-1:
+                    continue
+                if i < 27:
+                    continue
+
+                if self.df_candleStick['close'][i-1] > self.ma[i-1]:
                     judgement[i][1] = 0 # 売り新規しない
+                else:
+                    judgement[i][0] = 0 # 買い新規しない
+        if 'MACD' in self.filtter:
+            close = pd.to_numeric(df_candleStick['close']).astype(float)
+            macd, macdsignal, macdhist = talib.MACDFIX(np.array(close), signalperiod=9)
+
+            for i in range(len(df_candleStick.index)):
+                if i == len(df_candleStick.index)-1:
+                    continue
+                if i < 27:
+                    continue
+
+                if macd[i-1] > macdsignal[i-1]:
+                    judgement[i][1] = 0 # 売り新規しない
+                else:
+                    judgement[i][0] = 0 # 買い新規しない
 
         t2 = time.time()
         print('フィルタの計算：{}'.format(t2-t1))
 
+        # print(judgement)
         return judgement
 
     def calcRSI(self, target, up_or_down, open_or_close):
@@ -1094,9 +1188,9 @@ class ChannelBreakOut:
                     continue
 
             # トレーリング幅の計算
-            priceRangeMean = sum(priceRange[i-self.entryTerm:i]) / self.entryTerm
-            offset = 1000000
-            offset_cost = 1000
+            # priceRangeMean = sum(priceRange[i-self.entryTerm:i]) / self.entryTerm
+            offset = 5000
+            offset_cost = 500
 
             #エントリーロジック
             if pos == 0 and not isRange[i]:
@@ -1275,6 +1369,13 @@ class ChannelBreakOut:
                         sonngiri_wait_term = 0
                         judgement[i][2] = max_or_min_price - offset - offset_cost
 
+                # すぐ損切する
+                sonngiri = False
+                if sonngiri:
+                    if df_candleStick['open'][i] > df_candleStick['close'][i]:
+                        flg_trail = True
+                        judgement[i][2] = df_candleStick['close'][i]
+
                 #ロングクローズ
                 if judgement[i][2] != 0 or flg_trail:
                     flg_trail = False
@@ -1320,6 +1421,13 @@ class ChannelBreakOut:
                             flg_trail = True
                             sonngiri_wait_term = 0
                             judgement[i][3] = max_or_min_price + offset + offset_cost
+
+                # すぐ損切する
+                sonngiri = False
+                if sonngiri:
+                    if df_candleStick['open'][i] < df_candleStick['close'][i]:
+                        flg_trail = True
+                        judgement[i][3] = df_candleStick['close'][i]
 
                 #ショートクローズ
                 if judgement[i][3] != 0 or flg_trail:
@@ -1582,6 +1690,7 @@ class ChannelBreakOut:
         df_candleStick = self.fromListToDF(candleStick)
         if self.myOHLC:
             processed_candleStick = df_candleStick.resample(timeScale).agg({'open': 'first','high': 'max','low': 'min','close': 'last'})
+            processed_candleStick.to_csv('resample.csv')
         else:
             processed_candleStick = df_candleStick.resample(timeScale).agg({'open': 'first','high': 'max','low': 'min','close': 'last',"volume" : "sum"})
         processed_candleStick = processed_candleStick.dropna()
