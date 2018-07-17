@@ -586,11 +586,9 @@ class ChannelBreakOut:
                     continue
 
                 if self.gyakubari:
-
                     # ショートエントリー
                     if df_candleStick["high"][i] > entryHighLine[i]:
                         judgement[i][1] = entryHighLine[i]
-                        
                     # ロングエントリー
                     if df_candleStick["low"][i] < entryLowLine[i]:
                         judgement[i][0] = entryLowLine[i]
@@ -620,6 +618,7 @@ class ChannelBreakOut:
                         else:
                             pass
                     else:
+                        # if "60T" in self.candleTerm:
                         MAX_cost = 3000
                         # 0.5はstoplimitのトリガ価格分を想定
                         #上抜けでロングエントリー                    
@@ -709,6 +708,7 @@ class ChannelBreakOut:
                     continue
                 if i >= len(df_candleStick)-1:
                     continue
+                    
                 # トレンドあり
                 if self.ADX[i-1] > self.filtter_param:
                     if self.gyakubari:
@@ -905,6 +905,7 @@ class ChannelBreakOut:
                     continue
                 if i < 14:
                     continue
+                    
                 # ボラがない
                 # if self.NATR[i-1] < self.NATR[i-1-14]:
                 if self.NATR[i-1] < 0.05:
@@ -941,7 +942,7 @@ class ChannelBreakOut:
             for i in range(len(df_candleStick.index)):
                 if i == len(df_candleStick.index)-1:
                     continue
-                if i < 27:
+                if i < self.filtter_param:
                     continue
 
                 if self.df_candleStick['close'][i-1] > self.ma[i-1]:
@@ -962,6 +963,22 @@ class ChannelBreakOut:
                     judgement[i][1] = 0 # 売り新規しない
                 else:
                     judgement[i][0] = 0 # 買い新規しない
+        if 'STOCH' in self.filtter:
+            STOCH = abstract.STOCH(df_candleStick, fastk_period=720, slowk_period=1)
+            print(STOCH['slowk'])
+
+            for i in range(len(df_candleStick.index)):
+                if i == len(df_candleStick.index)-1:
+                    continue
+                if i < 15:
+                    continue
+
+                if STOCH['slowk'][i-1] > 85:
+                    judgement[i][0] = 0 # 買い新規しない
+                    judgement[i][1] = 0 # 売り新規しない
+                elif STOCH['slowk'][i-1] < 15:
+                    judgement[i][0] = 0 # 買い新規しない
+                    judgement[i][1] = 0 # 売り新規しない
 
         t2 = time.time()
         print('フィルタの計算：{}'.format(t2-t1))
@@ -1144,6 +1161,7 @@ class ChannelBreakOut:
         sonngiri_wait_term = 0
         max_or_min_price = 9999999
         flg_trail = False
+        sma = self.calculateMA(df_candleStick['close'], self.entryTerm, 'SMA')
 
         for i in range(len(df_candleStick.index)):
             if i == 0:
@@ -1151,45 +1169,14 @@ class ChannelBreakOut:
             if i == len(judgement)-1:
                 continue
 
-            if sonngiri_wait_term != 0:
-                sonngiri_wait_term -= 1
-                pl[i] = pl[i-1]
-                continue
-
-            # 損切ロジック
-            sonngiri_range = 0
-            if sonngiri_range != 0:
-                if pos == 1 and buy_entry[-1]-sonngiri_range > df_candleStick["close"][i-1]:
-                    nOfTrade += 1
-                    pos -= 1
-                    # 実際は始値よりブレるだろうけととりあえず。。
-                    buy_close.append(df_candleStick["open"][i])
-                    #値幅
-                    plRange = buy_close[-1] - buy_entry[-1]
-                    pl[i] = pl[i-1] + (buy_close[-1] - df_candleStick['close'][i-1])
-                    pl[i] = pl[i] - self.cost * lot
-                    buyCloseSignals.append(df_candleStick.index[i])
-                    plPerTrade.append((plRange-self.cost)*lot)
-                    trade_log.append([df_candleStick.index[i], 'buy  close', buy_close[-1] , (plRange-self.cost)*lot])
-                    sonngiri_wait_term = 5
-                    continue
-                elif pos == -1 and sell_entry[-1]+sonngiri_range < df_candleStick["close"][i-1]:
-                    nOfTrade += 1
-                    pos += 1
-                    # 実際は始値よりブレるだろうけととりあえず。。
-                    sell_close.append(df_candleStick["open"][i])
-                    plRange = sell_entry[-1] - sell_close[-1]
-                    pl[i] = pl[i-1] + (df_candleStick['close'][i-1] - sell_close[-1])
-                    pl[i] = pl[i] - self.cost * lot
-                    sellCloseSignals.append(df_candleStick.index[i])
-                    plPerTrade.append((plRange-self.cost)*lot)
-                    trade_log.append([df_candleStick.index[i], 'sell close', sell_close[-1], (plRange-self.cost)*lot])
-                    sonngiri_wait_term = 5
-                    continue
+            # if sonngiri_wait_term != 0:
+            #     sonngiri_wait_term -= 1
+            #     pl[i] = pl[i-1]
+            #     continue
 
             # トレーリング幅の計算
             # priceRangeMean = sum(priceRange[i-self.entryTerm:i]) / self.entryTerm
-            offset = 5000
+            offset = 1500
             offset_cost = 500
 
             #エントリーロジック
@@ -1234,11 +1221,10 @@ class ChannelBreakOut:
                                 flg_trail = True
                                 sonngiri_wait_term = 0
                         else:
-                            if  df_candleStick['high'][i] - offset > df_candleStick['close'][i]:
-                                # judgement[i][2] = ((df_candleStick['high'][i] - offset)*2 + df_candleStick['low'][i]*1)/3
-                                judgement[i][2] = df_candleStick['high'][i] - offset - offset_cost
+                            if  judgement[i][0] - offset > df_candleStick['close'][i]:
+                                judgement[i][2] = judgement[i][0] - offset - offset_cost
                                 flg_trail = True
-                                sonngiri_wait_term = 5
+                                sonngiri_wait_term = 0
 
                         if flg_trail:
 
@@ -1310,9 +1296,9 @@ class ChannelBreakOut:
                                 flg_trail = True
                                 sonngiri_wait_term = 0
                         else:
-                            if  df_candleStick['low'][i] + offset < df_candleStick['close'][i]:
-                                # judgement[i][3] = ((df_candleStick['low'][i] + offset)*2 + df_candleStick['high'][i]*1)/3
-                                judgement[i][3] = df_candleStick['low'][i] + offset + offset_cost
+                            if  judgement[i][1] + offset < df_candleStick['close'][i]:
+                                # judgement[i][3] = ((judgement[i][1] + offset)*2 + df_candleStick['high'][i]*1)/3
+                                judgement[i][3] = judgement[i][1] + offset + offset_cost
                                 flg_trail = True
                                 sonngiri_wait_term = 0
 
@@ -1364,17 +1350,17 @@ class ChannelBreakOut:
 
                 # トレーリングストップ
                 if self.trailingStop:
-                    if  max_or_min_price - offset > df_candleStick['low'][i]:
+                    if  buy_entry[-1] - offset > df_candleStick['low'][i]:
                         flg_trail = True
                         sonngiri_wait_term = 0
-                        judgement[i][2] = max_or_min_price - offset - offset_cost
+                        judgement[i][2] = buy_entry[-1] - offset - offset_cost
 
-                # すぐ損切する
-                sonngiri = False
-                if sonngiri:
-                    if df_candleStick['open'][i] > df_candleStick['close'][i]:
+                # トレンドなくなったら決済する
+                if not self.gyakubari and self.trailingStop:
+                    if sma[i-1] < sma[i-2]:
                         flg_trail = True
-                        judgement[i][2] = df_candleStick['close'][i]
+                        sonngiri_wait_term = 0
+                        judgement[i][2] = df_candleStick['open'][i] - offset_cost
 
                 #ロングクローズ
                 if judgement[i][2] != 0 or flg_trail:
@@ -1405,7 +1391,15 @@ class ChannelBreakOut:
                             pl[i] = pl[i] - self.cost * lot
                             sellEntrySignals.append(df_candleStick.index[i])
                             trade_log.append([df_candleStick.index[i], 'sell entry2', judgement[i][1]])
-
+                        # ロングエントリー
+                        elif judgement[i][0] != 0:
+                            pos += 1
+                            buy_entry.append(judgement[i][0])
+                            pl[i] = pl[i-1] + (buy_close[-1] - df_candleStick['close'][i-1])
+                            pl[i] = pl[i] + (df_candleStick['close'][i] - buy_entry[-1])
+                            pl[i] = pl[i] - self.cost * lot
+                            buyEntrySignals.append(df_candleStick.index[i])
+                            trade_log.append([df_candleStick.index[i], 'buy  entry2', judgement[i][0]])
                 else:
                     # ロング継続
                     pl[i] = pl[i-1] + (df_candleStick['close'][i] - df_candleStick['close'][i-1])
@@ -1417,10 +1411,10 @@ class ChannelBreakOut:
 
                 # トレーリングストップ
                 if self.trailingStop:
-                    if  max_or_min_price + offset < df_candleStick['high'][i]:
+                    if  sell_entry[-1] + offset < df_candleStick['high'][i]:
                             flg_trail = True
                             sonngiri_wait_term = 0
-                            judgement[i][3] = max_or_min_price + offset + offset_cost
+                            judgement[i][3] = sell_entry[-1] + offset + offset_cost
 
                 # すぐ損切する
                 sonngiri = False
@@ -1428,6 +1422,13 @@ class ChannelBreakOut:
                     if df_candleStick['open'][i] < df_candleStick['close'][i]:
                         flg_trail = True
                         judgement[i][3] = df_candleStick['close'][i]
+
+                # トレンドなくなったら決済する
+                if not self.gyakubari and self.trailingStop:
+                    if sma[i-1] > sma[i-2]:
+                        flg_trail = True
+                        sonngiri_wait_term = 0
+                        judgement[i][3] = df_candleStick['open'][i] + offset_cost
 
                 #ショートクローズ
                 if judgement[i][3] != 0 or flg_trail:
@@ -1456,8 +1457,16 @@ class ChannelBreakOut:
                             pl[i] = pl[i] + (df_candleStick['close'][i] - buy_entry[-1])
                             pl[i] = pl[i] - self.cost * lot
                             buyEntrySignals.append(df_candleStick.index[i])
-                            trade_log.append([df_candleStick.index[i], 'buy  entry', judgement[i][0]])
-
+                            trade_log.append([df_candleStick.index[i], 'buy  entry2', judgement[i][0]])
+                        # ショートエントリー
+                        elif judgement[i][1] != 0:
+                            pos -= 1
+                            sell_entry.append(judgement[i][1])
+                            pl[i] = pl[i-1] + (df_candleStick['close'][i-1] - sell_close[-1])
+                            pl[i] = pl[i] + (sell_entry[-1] - df_candleStick['close'][i])
+                            pl[i] = pl[i] - self.cost * lot
+                            sellEntrySignals.append(df_candleStick.index[i])
+                            trade_log.append([df_candleStick.index[i], 'sell entry2', judgement[i][1]])
                 else:
                     # ショート継続
                     pl[i] = pl[i-1] + (df_candleStick['close'][i-1] - df_candleStick['close'][i])
@@ -1664,7 +1673,7 @@ class ChannelBreakOut:
         # 完了時刻⇒開始時刻に変換
         # これをしないとresampleで1分ズレるので
         # 約定履歴から生成したOHLCは開始時刻になってるのでcryptowatchが対象
-        if self.fileName == 'chart_new.csv':
+        if 'new' in self.fileName:
             del date[-1]
             del priceOpen[0]
             del priceHigh[0]
