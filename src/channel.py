@@ -740,27 +740,23 @@ class ChannelBreakOut:
         if 'CCI' in self.filtter:
             # 最新足の影響大
             self.CCI = abstract.CCI(df_candleStick, timeperiod=14)
-            Q1 = self.CCI.quantile(self.filtter_param)
-            Q3 = self.CCI.quantile(1-self.filtter_param)
-            # Q1 = -165
-            # Q3 = 165
+            Q1 = -self.filtter_param
+            Q3 = self.filtter_param
             for i in range(len(df_candleStick.index)):
                 if i == len(df_candleStick.index)-1:
                     continue
-                # 上昇トレンド
+
+                # 買われすぎのときだけ売る
                 if self.CCI[i-1] > Q3 and self.trend_adx[i-1]:
-                    judgement[i][1] = 0 # 売り新規しない
-                # 下降トレンド
-                if self.CCI[i-1] < Q1 and self.trend_adx[i-1]:
-                    judgement[i][0] = 0 # 買い新規しない
+                    pass
                 else:
-                    # 逆張りはトレンドないときに注文する
-                    if self.gyakubari:
-                        pass
-                    # トレンドフォローはトレンドないときは注文しない
-                    else:
-                        judgement[i][0] = 0 # 買い新規しない
-                        judgement[i][1] = 0 # 売り新規しない
+                    judgement[i][1] = 0 # 売り新規しない
+
+                # 売られすぎのときだけ買う
+                if self.CCI[i-1] < Q1 and self.trend_adx[i-1]:
+                    pass
+                else:
+                    judgement[i][0] = 0 # 買い新規しない
         if 'CMO' in self.filtter:
             # 205, 445126JPY, 4.852
             self.CMO = abstract.CMO(df_candleStick, timeperiod=14)
@@ -964,8 +960,7 @@ class ChannelBreakOut:
                 else:
                     judgement[i][0] = 0 # 買い新規しない
         if 'STOCH' in self.filtter:
-            STOCH = abstract.STOCH(df_candleStick, fastk_period=720, slowk_period=1)
-            print(STOCH['slowk'])
+            STOCH = abstract.STOCH(df_candleStick, fastk_period=300, slowk_period=1)
 
             for i in range(len(df_candleStick.index)):
                 if i == len(df_candleStick.index)-1:
@@ -975,10 +970,13 @@ class ChannelBreakOut:
 
                 if STOCH['slowk'][i-1] > 85:
                     judgement[i][0] = 0 # 買い新規しない
-                    judgement[i][1] = 0 # 売り新規しない
                 elif STOCH['slowk'][i-1] < 15:
-                    judgement[i][0] = 0 # 買い新規しない
                     judgement[i][1] = 0 # 売り新規しない
+
+                # if STOCH['slowk'][i-1] > 95:
+                #     judgement[i][3] = df_candleStick['open'][i] # 売り決済する
+                # elif STOCH['slowk'][i-1] < 5:
+                #     judgement[i][2] = df_candleStick['open'][i] # 買い決済する
 
         t2 = time.time()
         print('フィルタの計算：{}'.format(t2-t1))
@@ -1176,7 +1174,7 @@ class ChannelBreakOut:
 
             # トレーリング幅の計算
             # priceRangeMean = sum(priceRange[i-self.entryTerm:i]) / self.entryTerm
-            offset = 1500
+            offset = 10000
             offset_cost = 500
 
             #エントリーロジック
