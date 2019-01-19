@@ -710,7 +710,7 @@ class ChannelBreakOut:
                     continue
                     
                 # トレンドあり
-                if self.ADX[i-1] > self.filtter_param:
+                if self.ADX[i-1] > 25:
                     if self.gyakubari:
                         judgement[i][0] = 0 # 買い新規しない
                         judgement[i][1] = 0 # 売り新規しない
@@ -945,6 +945,32 @@ class ChannelBreakOut:
                     judgement[i][1] = 0 # 売り新規しない
                 else:
                     judgement[i][0] = 0 # 買い新規しない
+        if 'MA2' in self.filtter:
+            close = pd.to_numeric(self.df_candleStick['close']).astype(float)
+            self.ma = self.calculateMA(close, 30, 'SMA')
+
+            for i in range(len(df_candleStick.index)):
+                if i == len(df_candleStick.index)-1:
+                    continue
+
+                if self.df_candleStick['close'][i-1] > self.ma[i-1]:
+                    judgement[i][1] = 0 # 売り新規しない
+                    judgement[i][2] = 0 # 買い決済しない
+                else:
+                    judgement[i][0] = 0 # 買い新規しない
+                    judgement[i][3] = 0 # 売り決済しない
+        if 'MA3' in self.filtter:
+            close = pd.to_numeric(self.df_candleStick['close']).astype(float)
+            self.ma = self.calculateMA(close, 120, 'SMA')
+
+            for i in range(len(df_candleStick.index)):
+                if i == len(df_candleStick.index)-1:
+                    continue
+
+                if self.df_candleStick['close'][i-1] > self.ma[i-1]:
+                    judgement[i][1] = 0 # 売り新規しない
+                else:
+                    judgement[i][0] = 0 # 買い新規しない
         if 'MACD' in self.filtter:
             close = pd.to_numeric(df_candleStick['close']).astype(float)
             macd, macdsignal, macdhist = talib.MACDFIX(np.array(close), signalperiod=9)
@@ -973,10 +999,10 @@ class ChannelBreakOut:
                 elif STOCH['slowk'][i-1] < 15:
                     judgement[i][1] = 0 # 売り新規しない
 
-                # if STOCH['slowk'][i-1] > 95:
-                #     judgement[i][3] = df_candleStick['open'][i] # 売り決済する
-                # elif STOCH['slowk'][i-1] < 5:
-                #     judgement[i][2] = df_candleStick['open'][i] # 買い決済する
+                if STOCH['slowk'][i-1] > 95:
+                    judgement[i][3] = df_candleStick['open'][i] # 売り決済する
+                elif STOCH['slowk'][i-1] < 5:
+                    judgement[i][2] = df_candleStick['open'][i] # 買い決済する
 
         t2 = time.time()
         print('フィルタの計算：{}'.format(t2-t1))
